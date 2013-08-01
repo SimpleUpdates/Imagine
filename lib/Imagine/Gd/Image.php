@@ -35,6 +35,13 @@ final class Image implements ImageInterface
      * @var resource
      */
     private $resource;
+
+    /**
+     * Flag whether this class has been cloned. Important for maintaining the resource object
+     *
+     * @var boolean
+     */
+    private $cloned = false;
     private $layers;
 
     /**
@@ -61,10 +68,18 @@ final class Image implements ImageInterface
      */
     public function __destruct()
     {
-        if (is_resource($this->resource) && 'gd' === get_resource_type($this->resource)) {
+        if (!$this->cloned && is_resource($this->resource) && 'gd' === get_resource_type($this->resource)) {
             imagedestroy($this->resource);
         }
     }
+
+    /**
+     */
+    public function __clone()
+    {
+        $this->cloned = true;
+    }
+
 
     /**
      * Returns Gd resource
@@ -182,8 +197,11 @@ final class Image implements ImageInterface
 
         imagealphablending($this->resource, false);
         imagealphablending($dest, false);
+        
+        if (!$this->cloned) {
+            imagedestroy($this->resource);
+        }
 
-        imagedestroy($this->resource);
 
         $this->resource = $dest;
 
@@ -331,7 +349,9 @@ final class Image implements ImageInterface
         );
 
         $imageSize = $this->getSize();
-        $thumbnail = $this->copy();
+        
+        $thumbnail = clone $this;
+        $this->cloned = true;
 
         // if target width is larger than image width
         // AND target height is longer than image height
